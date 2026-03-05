@@ -1,0 +1,89 @@
+# PrometheusRule for DataFlow Operator alerts.
+# Requires Prometheus Operator. Labels (release: kube-prometheus-stack) must match your Prometheus ruleSelector.
+# Apply: kubectl apply -f monitoring/alerts/prometheusrule.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: dataflow-operator
+  labels:
+    release: kube-prometheus-stack
+    app: dataflow-operator
+spec:
+  groups:
+    - name: dataflow-operator
+      rules:
+        - alert: DataFlowInError
+          expr: dataflow_status{phase="Error"} == 1
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "DataFlow {{ $labels.namespace }}/{{ $labels.name }} is in Error state"
+            description: "DataFlow {{ $labels.namespace }}/{{ $labels.name }} has been in Error state for more than 2 minutes."
+
+        - alert: DataFlowConnectorDisconnected
+          expr: dataflow_connector_connection_status == 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "DataFlow connector {{ $labels.namespace }}/{{ $labels.name }} is disconnected"
+            description: "Connector {{ $labels.connector_type }}/{{ $labels.connector_name }} for DataFlow {{ $labels.namespace }}/{{ $labels.name }} has been disconnected for more than 5 minutes."
+
+        - alert: DataFlowHighErrorRate
+          expr: |
+            (
+              sum(rate(dataflow_connector_errors_total[5m])) by (namespace, name)
+              + sum(rate(dataflow_transformer_errors_total[5m])) by (namespace, name)
+            )
+            /
+            sum(rate(dataflow_messages_received_total[5m])) by (namespace, name)
+            > 0.01
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "DataFlow {{ $labels.namespace }}/{{ $labels.name }} has high error rate"
+            description: "Error rate (connector + transformer errors) / messages received is above 1% for {{ $labels.namespace }}/{{ $labels.name }}. Current value: {{ $value }}."
+
+        - alert: DataFlowSlowProcessing
+          expr: |
+            histogram_quantile(0.95,
+              sum(rate(dataflow_processing_duration_seconds_bucket[5m])) by (namespace, name, le)
+            ) > 1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "DataFlow {{ $labels.namespace }}/{{ $labels.name }} has slow message processing"
+            description: "p95 message processing duration is above 1 second for {{ $labels.namespace }}/{{ $labels.name }}. Current value: {{ $value }}s."
+
+        - alert: DataFlowLowTaskSuccessRate
+          expr: dataflow_task_success_rate < 0.95
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "DataFlow {{ $labels.namespace }}/{{ $labels.name }} has low task success rate"
+            description: "Task success rate is below 95% for {{ $labels.namespace }}/{{ $labels.name }}. Current value: {{ $value }}."
+
+        - alert: DataFlowHighQueueSize
+          expr: dataflow_task_queue_size > 1000
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "DataFlow {{ $labels.namespace }}/{{ $labels.name }} has high queue size"
+            description: "Queue {{ $labels.queue_type }} for {{ $labels.namespace }}/{{ $labels.name }} exceeds 1000 messages. Current value: {{ $value }}."
+
+        - alert: DataFlowHighE2ELatency
+          expr: |
+            histogram_quantile(0.99,
+              sum(rate(dataflow_task_end_to_end_latency_seconds_bucket[5m])) by (namespace, name, le)
+            ) > 5
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "DataFlow {{ $labels.namespace }}/{{ $labels.name }} has high end-to-end latency"
+            description: "p99 end-to-end latency is above 5 seconds for {{ $labels.namespace }}/{{ $labels.name }}. Current value: {{ $value }}s."
