@@ -17,9 +17,9 @@
   },
   "editable": true,
   "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
+  "graphTooltip": 1,
   "id": null,
-  "description": "Monitoring DataFlow Operator: manifests, messages, connectors, transformers, queues, latency and resource consumption (operator, processor pods). Requires Prometheus + cAdvisor/kubelet for resource metrics. Documentation: docs/docs/en/metrics.md",
+  "description": "DataFlow Operator monitoring: manifests, SLOs (aligned with PrometheusRule alerts), messages, pipeline health, stages, latency, queues, operator reconcile, resources. Requires Prometheus; cAdvisor/kubelet for container_* panels. Docs: docs/docs/en/metrics.md",
   "links": [
     {
       "asDropdown": false,
@@ -32,6 +32,18 @@
       "tooltip": "Metrics documentation",
       "type": "link",
       "url": "https://dataflow-operator.github.io/docs/en/metrics/"
+    },
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": true,
+      "title": "Prometheus alerts",
+      "tooltip": "PrometheusRule definitions",
+      "type": "link",
+      "url": "https://github.com/dataflow-operator/dataflow-operator/blob/main/monitoring/alerts/prometheusrule.yaml"
     }
   ],
   "panels": [
@@ -85,7 +97,9 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -143,7 +157,9 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -201,7 +217,9 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -229,13 +247,21 @@
       },
       "fieldConfig": {
         "defaults": {
-          "color": {"mode": "thresholds"},
+          "color": {
+            "mode": "thresholds"
+          },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              {"color": "green", "value": null},
-              {"color": "red", "value": 1}
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
             ]
           },
           "unit": "short"
@@ -255,7 +281,9 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -313,7 +341,9 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -371,7 +401,9 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -439,7 +471,9 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -452,7 +486,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "avg(dataflow_task_success_rate{namespace=~\"$namespace\", name=~\"$dataflow\"}) * 100",
+          "expr": "min(dataflow_task_success_rate{namespace=~\"$namespace\", name=~\"$dataflow\"}) * 100",
           "legendFormat": "__auto",
           "refId": "A"
         }
@@ -461,12 +495,806 @@
       "type": "stat"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.5
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 5
+      },
+      "id": 31,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "(sum(rate(dataflow_connector_errors_total{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])) + sum(rate(dataflow_transformer_errors_total{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval]))) / sum(rate(dataflow_messages_received_total{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])) * 100",
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ],
+      "title": "Error rate",
+      "type": "stat",
+      "description": "(connector + transformer errors) / messages received"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 500
+              },
+              {
+                "color": "red",
+                "value": 1000
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 5
+      },
+      "id": 32,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "max(dataflow_task_queue_size{namespace=~\"$namespace\", name=~\"$dataflow\"})",
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ],
+      "title": "Max queue",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 5
+      },
+      "id": 33,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(dataflow_task_active_messages{namespace=~\"$namespace\", name=~\"$dataflow\"})",
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ],
+      "title": "Active messages",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 5
+      },
+      "id": 34,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "count(  (dataflow_status{namespace=~\"$namespace\", name=~\"$dataflow\", phase=\"Running\"} == 1)  * on(namespace, name) (    (sum(rate(dataflow_messages_received_total{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])) by (namespace, name) == 0)    or    (sum(rate(dataflow_messages_sent_total{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])) by (namespace, name) == 0)  )) or vector(0)",
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ],
+      "title": "Stalled pipelines",
+      "type": "stat",
+      "description": "Running DataFlows with zero message throughput"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "id": 35,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "value"
+          ]
+        },
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "count(dataflow_status{namespace=~\"$namespace\", name=~\"$dataflow\"}) by (phase)",
+          "legendFormat": "{{phase}}",
+          "refId": "A"
+        }
+      ],
+      "title": "DataFlow phases",
+      "type": "piechart"
+    },
+    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 9
+        "y": 15
+      },
+      "id": 109,
+      "panels": [],
+      "title": "SLO & Alerts",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.5
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 0,
+        "y": 16
+      },
+      "id": 40,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "(sum(rate(dataflow_connector_errors_total{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])) + sum(rate(dataflow_transformer_errors_total{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval]))) / sum(rate(dataflow_messages_received_total{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])) * 100",
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ],
+      "title": "SLO: Error rate",
+      "type": "stat",
+      "description": "Alert: DataFlowHighErrorRate (>1%)"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 3,
+        "y": 16
+      },
+      "id": 41,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.95, sum(rate(dataflow_processing_duration_seconds_bucket{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])) by (namespace, name, le))",
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ],
+      "title": "SLO: p95 processing",
+      "type": "stat",
+      "description": "Alert: DataFlowSlowProcessing (>1s)"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 95
+              },
+              {
+                "color": "green",
+                "value": 99
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 6,
+        "y": 16
+      },
+      "id": 42,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "min(dataflow_task_success_rate{namespace=~\"$namespace\", name=~\"$dataflow\"}) * 100",
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ],
+      "title": "SLO: Task success",
+      "type": "stat",
+      "description": "Alert: DataFlowLowTaskSuccessRate (<95%)"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1000
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 9,
+        "y": 16
+      },
+      "id": 43,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "max(dataflow_task_queue_size{namespace=~\"$namespace\", name=~\"$dataflow\"})",
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ],
+      "title": "SLO: Max queue",
+      "type": "stat",
+      "description": "Alert: DataFlowHighQueueSize (>1000)"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 12,
+        "y": 16
+      },
+      "id": 44,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.99, sum(rate(dataflow_task_end_to_end_latency_seconds_bucket{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])) by (namespace, name, le))",
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ],
+      "title": "SLO: p99 E2E",
+      "type": "stat",
+      "description": "Alert: DataFlowHighE2ELatency (>5s)"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0.1
+              }
+            ]
+          },
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 15,
+        "y": 16
+      },
+      "id": 45,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(rate(dataflow_connector_errors_total{namespace=~\"$namespace\", name=~\"$dataflow\", operation=\"read\", error_type=\"request_timed_out\"}[$interval]))",
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ],
+      "title": "SLO: Kafka timeouts/s",
+      "type": "stat",
+      "description": "Alert: DataFlowKafkaFetchTimeouts (>0.1/s)"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 18,
+        "y": 16
+      },
+      "id": 46,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "count(dataflow_connector_connection_status{namespace=~\"$namespace\", name=~\"$dataflow\"} == 0) or vector(0)",
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ],
+      "title": "SLO: Disconnected",
+      "type": "stat",
+      "description": "Alert: DataFlowConnectorDisconnected"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 20
       },
       "id": 101,
       "panels": [],
@@ -531,17 +1359,21 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 10
+        "y": 21
       },
       "id": 1,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
+          "calcs": [
+            "lastNotNull",
+            "max",
+            "mean"
+          ],
+          "displayMode": "table",
           "placement": "bottom"
         },
         "tooltip": {
-          "mode": "single"
+          "mode": "multi"
         }
       },
       "targets": [
@@ -550,7 +1382,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum(rate(dataflow_messages_received_total{namespace=~\"$namespace\", name=~\"$dataflow\"}[5m])) by (namespace, name, source_type)",
+          "expr": "sum(rate(dataflow_messages_received_total{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])) by (namespace, name, source_type)",
           "legendFormat": "{{namespace}}/{{name}} ({{source_type}})",
           "refId": "A"
         }
@@ -616,17 +1448,21 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 10
+        "y": 21
       },
       "id": 2,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
+          "calcs": [
+            "lastNotNull",
+            "max",
+            "mean"
+          ],
+          "displayMode": "table",
           "placement": "bottom"
         },
         "tooltip": {
-          "mode": "single"
+          "mode": "multi"
         }
       },
       "targets": [
@@ -635,7 +1471,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum(rate(dataflow_messages_sent_total{namespace=~\"$namespace\", name=~\"$dataflow\"}[5m])) by (namespace, name, sink_type, route)",
+          "expr": "sum(rate(dataflow_messages_sent_total{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])) by (namespace, name, sink_type, route)",
           "legendFormat": "{{namespace}}/{{name}} ({{sink_type}}/{{route}})",
           "refId": "A"
         }
@@ -649,7 +1485,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 18
+        "y": 29
       },
       "id": 102,
       "panels": [],
@@ -714,17 +1550,21 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 19
+        "y": 30
       },
       "id": 3,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
+          "calcs": [
+            "lastNotNull",
+            "max",
+            "mean"
+          ],
+          "displayMode": "table",
           "placement": "bottom"
         },
         "tooltip": {
-          "mode": "single"
+          "mode": "multi"
         }
       },
       "targets": [
@@ -733,7 +1573,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum(rate(dataflow_connector_errors_total{namespace=~\"$namespace\", name=~\"$dataflow\"}[5m])) by (namespace, name, connector_type, connector_name, operation, error_type)",
+          "expr": "sum(rate(dataflow_connector_errors_total{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])) by (namespace, name, connector_type, connector_name, operation, error_type)",
           "legendFormat": "{{namespace}}/{{name}} - {{connector_type}}/{{connector_name}} - {{operation}} - {{error_type}}",
           "refId": "A"
         }
@@ -799,17 +1639,21 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 19
+        "y": 30
       },
       "id": 4,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
+          "calcs": [
+            "lastNotNull",
+            "max",
+            "mean"
+          ],
+          "displayMode": "table",
           "placement": "bottom"
         },
         "tooltip": {
-          "mode": "single"
+          "mode": "multi"
         }
       },
       "targets": [
@@ -818,7 +1662,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum(rate(dataflow_transformer_errors_total{namespace=~\"$namespace\", name=~\"$dataflow\"}[5m])) by (namespace, name, transformer_type, transformer_index, error_type)",
+          "expr": "sum(rate(dataflow_transformer_errors_total{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])) by (namespace, name, transformer_type, transformer_index, error_type)",
           "legendFormat": "{{namespace}}/{{name}} - {{transformer_type}}[{{transformer_index}}] - {{error_type}}",
           "refId": "A"
         }
@@ -832,7 +1676,399 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 27
+        "y": 38
+      },
+      "id": 110,
+      "panels": [],
+      "title": "Pipeline health",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value"
+            },
+            "properties": [
+              {
+                "id": "custom.displayMode",
+                "value": "color-background"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "green",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 39
+      },
+      "id": 47,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "dataflow_connector_source_poll_healthy{namespace=~\"$namespace\", name=~\"$dataflow\"}",
+          "legendFormat": "__auto",
+          "refId": "A",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "title": "Source poll health",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true
+            },
+            "renameByName": {
+              "namespace": "Namespace",
+              "name": "Name",
+              "connector_type": "Type",
+              "connector_name": "Connector",
+              "Value": "Healthy"
+            }
+          }
+        }
+      ],
+      "type": "table",
+      "description": "1 = last polling read succeeded, 0 = failure"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 39
+      },
+      "id": 48,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max",
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "dataflow_task_active_messages{namespace=~\"$namespace\", name=~\"$dataflow\"}",
+          "legendFormat": "{{namespace}}/{{name}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Active messages (gauge)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 24,
+        "y": 39
+      },
+      "id": 49,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max",
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(rate(dataflow_task_stage_errors_total{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])) by (namespace, name, stage)",
+          "legendFormat": "{{namespace}}/{{name}} - {{stage}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Stage errors rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 36,
+        "y": 39
+      },
+      "id": 50,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max",
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(rate(dataflow_connector_errors_total{namespace=~\"$namespace\", name=~\"$dataflow\", operation=\"read\", error_type=\"request_timed_out\"}[$interval])) by (namespace, name, connector_name)",
+          "legendFormat": "{{namespace}}/{{name}} - {{connector_name}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Kafka fetch timeouts",
+      "type": "timeseries",
+      "description": "request_timed_out on connector read"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 47
       },
       "id": 103,
       "panels": [],
@@ -897,17 +2133,21 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 28
+        "y": 48
       },
       "id": 5,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
+          "calcs": [
+            "lastNotNull",
+            "max",
+            "mean"
+          ],
+          "displayMode": "table",
           "placement": "bottom"
         },
         "tooltip": {
-          "mode": "single"
+          "mode": "multi"
         }
       },
       "targets": [
@@ -916,7 +2156,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "histogram_quantile(0.95, sum(rate(dataflow_processing_duration_seconds_bucket{namespace=~\"$namespace\", name=~\"$dataflow\"}[5m])) by (namespace, name, le))",
+          "expr": "histogram_quantile(0.95, sum(rate(dataflow_processing_duration_seconds_bucket{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])) by (namespace, name, le))",
           "legendFormat": "p95 - {{namespace}}/{{name}}",
           "refId": "A"
         },
@@ -925,7 +2165,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "histogram_quantile(0.99, sum(rate(dataflow_processing_duration_seconds_bucket{namespace=~\"$namespace\", name=~\"$dataflow\"}[5m])) by (namespace, name, le))",
+          "expr": "histogram_quantile(0.99, sum(rate(dataflow_processing_duration_seconds_bucket{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])) by (namespace, name, le))",
           "legendFormat": "p99 - {{namespace}}/{{name}}",
           "refId": "B"
         },
@@ -934,8 +2174,8 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "avg(dataflow_processing_duration_seconds{namespace=~\"$namespace\", name=~\"$dataflow\"}) by (namespace, name)",
-          "legendFormat": "avg - {{namespace}}/{{name}}",
+          "expr": "sum(rate(dataflow_processing_duration_seconds_sum{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])) by (namespace, name) / sum(rate(dataflow_processing_duration_seconds_count{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])) by (namespace, name)",
+          "legendFormat": "mean - {{namespace}}/{{name}}",
           "refId": "C"
         }
       ],
@@ -1000,17 +2240,21 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 28
+        "y": 48
       },
       "id": 6,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
+          "calcs": [
+            "lastNotNull",
+            "max",
+            "mean"
+          ],
+          "displayMode": "table",
           "placement": "bottom"
         },
         "tooltip": {
-          "mode": "single"
+          "mode": "multi"
         }
       },
       "targets": [
@@ -1019,7 +2263,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "histogram_quantile(0.95, sum(rate(dataflow_transformer_duration_seconds_bucket{namespace=~\"$namespace\", name=~\"$dataflow\"}[5m])) by (namespace, name, transformer_type, transformer_index, le))",
+          "expr": "histogram_quantile(0.95, sum(rate(dataflow_transformer_duration_seconds_bucket{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])) by (namespace, name, transformer_type, transformer_index, le))",
           "legendFormat": "p95 - {{namespace}}/{{name}} - {{transformer_type}}[{{transformer_index}}]",
           "refId": "A"
         },
@@ -1028,7 +2272,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "histogram_quantile(0.99, sum(rate(dataflow_transformer_duration_seconds_bucket{namespace=~\"$namespace\", name=~\"$dataflow\"}[5m])) by (namespace, name, transformer_type, transformer_index, le))",
+          "expr": "histogram_quantile(0.99, sum(rate(dataflow_transformer_duration_seconds_bucket{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])) by (namespace, name, transformer_type, transformer_index, le))",
           "legendFormat": "p99 - {{namespace}}/{{name}} - {{transformer_type}}[{{transformer_index}}]",
           "refId": "B"
         }
@@ -1092,19 +2336,23 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
+        "w": 24,
         "x": 0,
-        "y": 36
+        "y": 56
       },
       "id": 21,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
+          "calcs": [
+            "lastNotNull",
+            "max",
+            "mean"
+          ],
+          "displayMode": "table",
           "placement": "bottom"
         },
         "tooltip": {
-          "mode": "single"
+          "mode": "multi"
         }
       },
       "targets": [
@@ -1113,7 +2361,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "histogram_quantile(0.95, sum(rate(dataflow_task_end_to_end_latency_seconds_bucket{namespace=~\"$namespace\", name=~\"$dataflow\"}[5m])) by (namespace, name, le))",
+          "expr": "histogram_quantile(0.95, sum(rate(dataflow_task_end_to_end_latency_seconds_bucket{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])) by (namespace, name, le))",
           "legendFormat": "p95 - {{namespace}}/{{name}}",
           "refId": "A"
         },
@@ -1122,7 +2370,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "histogram_quantile(0.99, sum(rate(dataflow_task_end_to_end_latency_seconds_bucket{namespace=~\"$namespace\", name=~\"$dataflow\"}[5m])) by (namespace, name, le))",
+          "expr": "histogram_quantile(0.99, sum(rate(dataflow_task_end_to_end_latency_seconds_bucket{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])) by (namespace, name, le))",
           "legendFormat": "p99 - {{namespace}}/{{name}}",
           "refId": "B"
         }
@@ -1136,7 +2384,271 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 44
+        "y": 64
+      },
+      "id": 111,
+      "panels": [],
+      "title": "Stages",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 65
+      },
+      "id": 51,
+      "options": {
+        "calculate": false,
+        "cellGap": 1,
+        "color": {
+          "exponent": 0.5,
+          "fill": "dark-orange",
+          "mode": "scheme",
+          "scheme": "Oranges",
+          "steps": 64
+        },
+        "exemplars": {
+          "color": "rgba(255,0,255,0.7)"
+        },
+        "filterValues": {
+          "le": 1e-09
+        },
+        "legend": {
+          "show": true
+        },
+        "rowsFrame": {
+          "layout": "auto"
+        },
+        "tooltip": {
+          "show": true,
+          "yHistogram": false
+        },
+        "yAxis": {
+          "axisPlacement": "left",
+          "reverse": false,
+          "unit": "s"
+        }
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(rate(dataflow_task_stage_duration_seconds_bucket{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])) by (le, stage)",
+          "format": "heatmap",
+          "legendFormat": "{{stage}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Stage duration heatmap",
+      "type": "heatmap",
+      "description": "Rate by stage and histogram bucket"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 73
+      },
+      "id": 52,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max",
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.95, sum(rate(dataflow_task_stage_duration_seconds_bucket{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])) by (namespace, name, stage, le))",
+          "legendFormat": "p95 - {{namespace}}/{{name}} - {{stage}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Stage duration p95",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 73
+      },
+      "id": 53,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max",
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.95, sum(rate(dataflow_task_stage_latency_seconds_bucket{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])) by (namespace, name, from_stage, to_stage, le))",
+          "legendFormat": "{{from_stage}} -> {{to_stage}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Stage-to-stage latency p95",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 81
       },
       "id": 104,
       "panels": [],
@@ -1201,7 +2713,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 45
+        "y": 82
       },
       "id": 22,
       "options": {
@@ -1286,7 +2798,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 45
+        "y": 82
       },
       "id": 23,
       "options": {
@@ -1305,7 +2817,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "deriv(dataflow_task_active_messages{namespace=~\"$namespace\", name=~\"$dataflow\"}[5m])",
+          "expr": "deriv(dataflow_task_active_messages{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])",
           "legendFormat": "Rate of change - {{namespace}}/{{name}}",
           "refId": "A"
         },
@@ -1314,14 +2826,14 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum(rate(dataflow_messages_received_total{namespace=~\"$namespace\", name=~\"$dataflow\"}[5m])) by (namespace, name) - sum(rate(dataflow_messages_sent_total{namespace=~\"$namespace\", name=~\"$dataflow\"}[5m])) by (namespace, name)",
+          "expr": "sum(rate(dataflow_messages_received_total{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])) by (namespace, name) - sum(rate(dataflow_messages_sent_total{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])) by (namespace, name)",
           "legendFormat": "In - Out (msg/s) - {{namespace}}/{{name}}",
           "refId": "B"
         }
       ],
       "title": "Active messages: dynamics",
       "type": "timeseries",
-      "description": "Rate of change of active messages (deriv) and difference between inbound/outbound flow. Positive values — queue accumulation, negative — decrease."
+      "description": "Rate of change of active messages (deriv) and difference between inbound/outbound flow. Positive values \u2014 queue accumulation, negative \u2014 decrease."
     },
     {
       "datasource": {
@@ -1381,7 +2893,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 53
+        "y": 90
       },
       "id": 24,
       "options": {
@@ -1400,7 +2912,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "histogram_quantile(0.95, sum(rate(dataflow_task_queue_wait_time_seconds_bucket{namespace=~\"$namespace\", name=~\"$dataflow\"}[5m])) by (namespace, name, queue_type, le))",
+          "expr": "histogram_quantile(0.95, sum(rate(dataflow_task_queue_wait_time_seconds_bucket{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])) by (namespace, name, queue_type, le))",
           "legendFormat": "p95 - {{namespace}}/{{name}} - {{queue_type}}",
           "refId": "A"
         },
@@ -1409,7 +2921,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "histogram_quantile(0.99, sum(rate(dataflow_task_queue_wait_time_seconds_bucket{namespace=~\"$namespace\", name=~\"$dataflow\"}[5m])) by (namespace, name, queue_type, le))",
+          "expr": "histogram_quantile(0.99, sum(rate(dataflow_task_queue_wait_time_seconds_bucket{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])) by (namespace, name, queue_type, le))",
           "legendFormat": "p99 - {{namespace}}/{{name}} - {{queue_type}}",
           "refId": "B"
         }
@@ -1475,7 +2987,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 53
+        "y": 90
       },
       "id": 25,
       "options": {
@@ -1508,7 +3020,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 61
+        "y": 98
       },
       "id": 105,
       "panels": [],
@@ -1573,7 +3085,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 62
+        "y": 99
       },
       "id": 18,
       "options": {
@@ -1592,7 +3104,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum(rate(dataflow_task_operations_total{namespace=~\"$namespace\", name=~\"$dataflow\", status=\"success\"}[5m])) by (namespace, name)",
+          "expr": "sum(rate(dataflow_task_operations_total{namespace=~\"$namespace\", name=~\"$dataflow\", status=\"success\"}[$interval])) by (namespace, name)",
           "legendFormat": "Success - {{namespace}}/{{name}}",
           "refId": "A"
         },
@@ -1601,7 +3113,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum(rate(dataflow_task_operations_total{namespace=~\"$namespace\", name=~\"$dataflow\", status=\"error\"}[5m])) by (namespace, name)",
+          "expr": "sum(rate(dataflow_task_operations_total{namespace=~\"$namespace\", name=~\"$dataflow\", status=\"error\"}[$interval])) by (namespace, name)",
           "legendFormat": "Error - {{namespace}}/{{name}}",
           "refId": "B"
         },
@@ -1610,7 +3122,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum(rate(dataflow_task_operations_total{namespace=~\"$namespace\", name=~\"$dataflow\", status=\"cancelled\"}[5m])) by (namespace, name)",
+          "expr": "sum(rate(dataflow_task_operations_total{namespace=~\"$namespace\", name=~\"$dataflow\", status=\"cancelled\"}[$interval])) by (namespace, name)",
           "legendFormat": "Cancelled - {{namespace}}/{{name}}",
           "refId": "C"
         }
@@ -1624,7 +3136,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 70
+        "y": 107
       },
       "id": 106,
       "panels": [],
@@ -1691,7 +3203,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 71
+        "y": 108
       },
       "id": 7,
       "options": {
@@ -1699,7 +3211,9 @@
         "footer": {
           "countRows": false,
           "fields": "",
-          "reducer": ["sum"],
+          "reducer": [
+            "sum"
+          ],
           "show": false
         },
         "showHeader": true
@@ -1804,7 +3318,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 71
+        "y": 108
       },
       "id": 8,
       "options": {
@@ -1812,7 +3326,9 @@
         "footer": {
           "countRows": false,
           "fields": "",
-          "reducer": ["sum"],
+          "reducer": [
+            "sum"
+          ],
           "show": false
         },
         "showHeader": true
@@ -1913,7 +3429,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 79
+        "y": 116
       },
       "id": 9,
       "options": {
@@ -1932,7 +3448,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum(rate(dataflow_connector_messages_read_total{namespace=~\"$namespace\", name=~\"$dataflow\"}[5m])) by (namespace, name, connector_type, connector_name)",
+          "expr": "sum(rate(dataflow_connector_messages_read_total{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])) by (namespace, name, connector_type, connector_name)",
           "legendFormat": "{{namespace}}/{{name}} - {{connector_type}}/{{connector_name}}",
           "refId": "A"
         }
@@ -1998,7 +3514,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 79
+        "y": 116
       },
       "id": 10,
       "options": {
@@ -2017,7 +3533,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum(rate(dataflow_connector_messages_written_total{namespace=~\"$namespace\", name=~\"$dataflow\"}[5m])) by (namespace, name, connector_type, connector_name, route)",
+          "expr": "sum(rate(dataflow_connector_messages_written_total{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])) by (namespace, name, connector_type, connector_name, route)",
           "legendFormat": "{{namespace}}/{{name}} - {{connector_type}}/{{connector_name}} ({{route}})",
           "refId": "A"
         }
@@ -2031,7 +3547,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 87
+        "y": 124
       },
       "id": 107,
       "panels": [],
@@ -2096,7 +3612,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 88
+        "y": 125
       },
       "id": 11,
       "options": {
@@ -2115,7 +3631,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum(rate(dataflow_transformer_executions_total{namespace=~\"$namespace\", name=~\"$dataflow\"}[5m])) by (namespace, name, transformer_type, transformer_index)",
+          "expr": "sum(rate(dataflow_transformer_executions_total{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])) by (namespace, name, transformer_type, transformer_index)",
           "legendFormat": "{{namespace}}/{{name}} - {{transformer_type}}[{{transformer_index}}]",
           "refId": "A"
         }
@@ -2181,7 +3697,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 88
+        "y": 125
       },
       "id": 12,
       "options": {
@@ -2200,7 +3716,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum(rate(dataflow_transformer_messages_in_total{namespace=~\"$namespace\", name=~\"$dataflow\"}[5m])) by (namespace, name, transformer_type, transformer_index)",
+          "expr": "sum(rate(dataflow_transformer_messages_in_total{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])) by (namespace, name, transformer_type, transformer_index)",
           "legendFormat": "In - {{namespace}}/{{name}} - {{transformer_type}}[{{transformer_index}}]",
           "refId": "A"
         },
@@ -2209,7 +3725,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum(rate(dataflow_transformer_messages_out_total{namespace=~\"$namespace\", name=~\"$dataflow\"}[5m])) by (namespace, name, transformer_type, transformer_index)",
+          "expr": "sum(rate(dataflow_transformer_messages_out_total{namespace=~\"$namespace\", name=~\"$dataflow\"}[$interval])) by (namespace, name, transformer_type, transformer_index)",
           "legendFormat": "Out - {{namespace}}/{{name}} - {{transformer_type}}[{{transformer_index}}]",
           "refId": "B"
         }
@@ -2223,7 +3739,259 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 96
+        "y": 133
+      },
+      "id": 112,
+      "panels": [],
+      "title": "Operator controller",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 134
+      },
+      "id": 54,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "dataflow_controller_reconcile_inflight",
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ],
+      "title": "Reconcile in-flight",
+      "type": "stat",
+      "description": "Operator controller (not filtered by DataFlow)"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 9,
+        "x": 6,
+        "y": 134
+      },
+      "id": 55,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max",
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.95, sum(rate(dataflow_controller_reconcile_duration_seconds_bucket[$interval])) by (result, le))",
+          "legendFormat": "p95 - {{result}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Reconcile duration p95",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 9,
+        "x": 15,
+        "y": 134
+      },
+      "id": 56,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max",
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(rate(dataflow_controller_reconcile_errors_total[$interval])) by (stage)",
+          "legendFormat": "{{stage}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Reconcile errors",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 142
       },
       "id": 108,
       "panels": [],
@@ -2288,7 +4056,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 97
+        "y": 143
       },
       "id": 26,
       "options": {
@@ -2307,7 +4075,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum(container_memory_working_set_bytes{container=\"dataflow-operator\"}) by (pod, namespace)",
+          "expr": "sum(container_memory_working_set_bytes{container=\"dataflow-operator\", namespace=~\"$namespace\"}) by (pod, namespace)",
           "legendFormat": "{{namespace}}/{{pod}}",
           "refId": "A"
         }
@@ -2374,7 +4142,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 97
+        "y": 143
       },
       "id": 27,
       "options": {
@@ -2393,7 +4161,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum(rate(container_cpu_usage_seconds_total{container=\"dataflow-operator\"}[5m])) by (pod, namespace)",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{container=\"dataflow-operator\", namespace=~\"$namespace\"}[$interval])) by (pod, namespace)",
           "legendFormat": "{{namespace}}/{{pod}}",
           "refId": "A"
         }
@@ -2460,7 +4228,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 105
+        "y": 151
       },
       "id": 28,
       "options": {
@@ -2546,7 +4314,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 105
+        "y": 151
       },
       "id": 29,
       "options": {
@@ -2565,7 +4333,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum(rate(container_cpu_usage_seconds_total{container=\"processor\", pod=~\"dataflow-.*\", namespace=~\"$namespace\"}[5m])) by (pod, namespace)",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{container=\"processor\", pod=~\"dataflow-.*\", namespace=~\"$namespace\"}[$interval])) by (pod, namespace)",
           "legendFormat": "{{namespace}}/{{pod}}",
           "refId": "A"
         }
@@ -2621,7 +4389,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 113
+        "y": 159
       },
       "id": 30,
       "options": {
@@ -2629,7 +4397,9 @@
         "footer": {
           "countRows": false,
           "fields": "",
-          "reducer": ["sum"],
+          "reducer": [
+            "sum"
+          ],
           "show": false
         },
         "showHeader": true
@@ -2673,7 +4443,11 @@
   "refresh": "30s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["dataflow", "kubernetes", "operator"],
+  "tags": [
+    "dataflow",
+    "kubernetes",
+    "operator"
+  ],
   "templating": {
     "list": [
       {
@@ -2691,6 +4465,39 @@
         "regex": "",
         "skipUrlSync": false,
         "type": "datasource"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": "5m",
+          "value": "5m"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Rate interval",
+        "multi": false,
+        "name": "interval",
+        "options": [
+          {
+            "selected": true,
+            "text": "5m",
+            "value": "5m"
+          },
+          {
+            "selected": false,
+            "text": "15m",
+            "value": "15m"
+          },
+          {
+            "selected": false,
+            "text": "1h",
+            "value": "1h"
+          }
+        ],
+        "query": "5m,15m,1h",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
       },
       {
         "current": {
@@ -2749,11 +4556,22 @@
     "to": "now"
   },
   "timepicker": {
-    "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h", "2h", "1d"]
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ]
   },
   "timezone": "browser",
   "title": "DataFlow Operator",
   "uid": "dataflow-operator",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }
